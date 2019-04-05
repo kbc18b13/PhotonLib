@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="PEventListener.h">
+    <ClInclude Include="Photon-Inc\PEventListener.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="PNetworkLogic.h">
+    <ClInclude Include="Photon-Inc\PNetworkLogic.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
