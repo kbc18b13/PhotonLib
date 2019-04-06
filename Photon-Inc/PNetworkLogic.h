@@ -19,18 +19,28 @@ namespace PhotonLib {
 		using RaiseEventOptions = ExitGames::LoadBalancing::RaiseEventOptions;
 
 	public:
-		//photonのwebサイトで取得したappIDで初期化。appVersionは適当に決めていい。
+		/// <summary>
+		/// 初期化。
+		/// </summary>
+		/// <param name="appID">photonのサイトで取得したappID</param>
+		/// <param name="appVersion">バージョン。適当に決めていい。</param>
 		PNetworkLogic(const JString& appID, const JString& appVersion)
 			:mLoadBalancingClient(*this, appID, appVersion, ExitGames::Photon::ConnectionProtocol::DEFAULT, true){};
 
-		/*PEventListenerをpublic継承したクラスを登録できる。
-		*登録したクラスのonPhotonEvent関数に他プレイヤーが投げたイベントが飛んでくる。*/
+		/// <summary>
+		/// PEventListenerを継承したクラスを登録する
+		/// </summary>
+		/// <remarks>
+		/// 登録したクラスのonPhotonEvent関数に他プレイヤーが投げたイベントが飛んでくる。
+		/// </remarks>
+		/// <param name="listener"></param>
 		void addEventListener(PEventListener* listener) {
 			listenerVector.push_back(listener);
 		}
 
-		/*photonに接続。isConnecting()で繋がったか確認できる。
-		接続中と接続試行中は何もしない。*/
+		/// <summary>
+		/// photonに接続。接続中と接続試行中は何もしない。
+		/// </summary>
 		void connect() {
 			if (state == DISCONNECT) {
 				if (mLoadBalancingClient.connect()) {
@@ -40,6 +50,9 @@ namespace PhotonLib {
 			}
 		}
 
+		/// <summary>
+		/// photonから切断。
+		/// </summary>
 		void disconnect() {
 			mLoadBalancingClient.disconnect();
 		}
@@ -52,24 +65,55 @@ namespace PhotonLib {
 			return errorMessage;
 		}
 
-		int getLocalPlayerNum() {
-			return localPlayerNum;
+		/// <summary>
+		/// 自分のいる部屋の参照を取得。
+		/// </summary>
+		/// <remarks>その参照が取得された部屋を出た後に参照されたインスタンスにアクセスするときの振る舞い、
+		/// および部屋の中にいないでこの関数を呼び出すときの振る舞いは未定義です。コピーへの操作は影響しません。</remarks>
+		ExitGames::LoadBalancing::MutableRoom& getJoinedRoom() {
+			return mLoadBalancingClient.getCurrentlyJoinedRoom();
 		}
 
+		/// <summary>
+		/// 自分のプレイヤーの参照を取得。
+		/// </summary>
+		ExitGames::LoadBalancing::MutablePlayer& getLocalPlayer() {
+			return mLoadBalancingClient.getLocalPlayer();
+		}
+
+		/// <summary>
+		/// 自分のプレイヤー番号を取得。
+		/// </summary>
+		int getLocalPlayerNum() {
+			return mLoadBalancingClient.getLocalPlayer().getNumber();
+		}
+
+		/// <summary>
+		/// photon接続状態にあるならtrue。
+		/// </summary>
 		bool isConnecting() {
 			return state >= CONNECT;
 		}
 
+		/// <summary>
+		/// エラーコードが0以外のときtrue。
+		/// </summary>
 		bool isError() {
 			return errorCode != 0;
 		}
 
+		/// <summary>
+		/// 部屋に入っていればtrue。
+		/// </summary>
 		bool isRoomIn() {
 			return state == ROOMIN;
 		}
 
-		/*roomNameに指定した名前の部屋が無ければ、その名前とmaxPlayerに指定した最大人数で部屋を作り、入る。
-		指定した名前の部屋が既にあった場合、ただ入るだけ。*/
+		/// <summary>
+		/// 部屋が既にあれば入室する。無ければ作り、入室する。
+		/// </summary>
+		/// <param name="roomName">部屋の名前。</param>
+		/// <param name="maxPlayer">最大プレイヤー数</param>
 		void joinOrCreateRoom(ExitGames::Common::JString roomName, nByte maxPlayer) {
 			if (state == CONNECT) {
 				ExitGames::LoadBalancing::RoomOptions option;
@@ -81,41 +125,55 @@ namespace PhotonLib {
 			}
 		}
 
-		/*イベントを投げる。他プレイヤーに情報を伝えるということ。
-		イベントの受け取り方はaddEventListener関数のコメントを見てね。
-		sendReliable - 情報を確実に伝えるならtrue, 速度優先で情報が消えてしまっても気にしないならfalse。
-		data -　伝えたいデータ。配列以外。
-		eventCode - イベントの種別。自由に決めていい。nByte(unsigned char)型。
-		*/
 		template<typename Ftype>
+		/// <summary>
+		///  データを他プレイヤーに投げる。文字型の配列はJString型として扱われるためこっち。
+		/// </summary>
+		/// <param name="sendReliable">確実に届けるならtrue。途中で消えてもいいならfalse。</param>
+		/// <param name="data">届けるデータ。</param>
+		/// <param name="eventCode">イベントの種別。自由に決めていい。</param>
+		/// <param name="options">様々なオプションを指定できる。</param>
 		void raiseEvent(bool sendReliable, const Ftype &data, nByte eventCode, const RaiseEventOptions& options = RaiseEventOptions()) {
 			if (!mLoadBalancingClient.opRaiseEvent(sendReliable, data, eventCode, options)) {
 				EGLOG(ExitGames::Common::DebugLevel::ERRORS, L"Could not raise event.");
 			}
 		}
 
-		//raiseEventの配列用。dataには配列の先頭ポインタを、sizeには要素数を入れる。
 		template<typename Ftype>
+		/// <summary>
+		/// 配列データを他プレイヤーに投げる。文字型の配列はこっちでは無い。
+		/// </summary>
+		/// <param name="sendReliable">確実に届けるならtrue。途中で消えてもいいならfalse。</param>
+		/// <param name="data">届けるデータ。</param>
+		/// <param name="eventCode">イベントの種別。自由に決めていい。</param>
+		/// <param name="options">様々なオプションを指定できる。</param>
 		void raiseEvent(bool sendReliable, const Ftype* data, int size, nByte eventCode, const RaiseEventOptions& options = RaiseEventOptions()) {
 			if (!mLoadBalancingClient.opRaiseEvent(sendReliable, data, size, eventCode, options)) {
 				EGLOG(ExitGames::Common::DebugLevel::ERRORS, L"Could not raise event.");
 			}
 		}
 
-		//全てのイベントリスナーを登録解除する
+		/// <summary>
+		/// 全てのイベントリスナーを登録解除する
+		/// </summary>
 		void removeAllListener() {
 			listenerVector.clear();
 		}
 
-		//引数に渡したイベントリスナーを登録解除する。
+		/// <summary>
+		/// イベントリスナーを登録解除する。
+		/// </summary>
+		/// <param name="listener">登録解除したいリスナー</param>
 		void removeListener(PEventListener* listener);
 
-		//ゲームループ内で呼び出し続けてください
+		/// <summary>
+		/// ゲームループ内で呼び出し続けてください
+		/// </summary>
 		void Update() {
 			mLoadBalancingClient.service();
 		}
 
-	//接続状態enum
+		//接続状態enum
 		enum ConnectState {
 			DISCONNECT,//切断
 			TRY_CONNECT,//接続試行中
@@ -125,18 +183,17 @@ namespace PhotonLib {
 		};
 	private:
 	/*************メンバ変数(private)**************/
-		ExitGames::LoadBalancing::Client mLoadBalancingClient;
+		ExitGames::LoadBalancing::Client mLoadBalancingClient; //photonへの操作を行うクライアント
 		ExitGames::Common::Logger mLogger; // accessed by EGLOG()
 
-		std::vector<PEventListener*> listenerVector;
+		std::vector<PEventListener*> listenerVector; //イベントリスナー入れ
 
-		ConnectState state;
-		int errorCode = 0;
+		ConnectState state; //接続状態
+		int errorCode = 0; //直前の操作のエラーコード
 		int warningCode = 0;
-		int localPlayerNum = -1;
 		JString errorMessage;
 
-	/*************リスナー関数(自分で呼んだりしない)************/
+	/*************ここから下の関数を外部から使うことはありません。************/
 		//接続しているか、ルームにいるかなどの情報が変更された場合の重複した処理
 		bool stateChange(ConnectState newState, int errorCode, const JString& errStr);
 
@@ -176,28 +233,26 @@ namespace PhotonLib {
 
 		void disconnectReturn(void) override {
 			state = DISCONNECT;
-			localPlayerNum = -1;
 		}
 
 		void createRoomReturn(int localPlayerNr, const Hashtable& roomProperties, const Hashtable& playerProperties, int errorCode, const JString& errorString) override {
-			if (stateChange(ROOMIN, errorCode, errorString)) { localPlayerNum = localPlayerNr; }
+			stateChange(ROOMIN, errorCode, errorString);
 		}
 
 		void joinOrCreateRoomReturn(int localPlayerNr, const Hashtable& roomProperties, const Hashtable& playerProperties, int errorCode, const JString& errorString) override {
-			if (stateChange(ROOMIN, errorCode, errorString)) { localPlayerNum = localPlayerNr; }
+			stateChange(ROOMIN, errorCode, errorString);
 		}
 
 		void joinRoomReturn(int localPlayerNr, const Hashtable& roomProperties, const Hashtable& playerProperties, int errorCode, const JString& errorString) override {
-			if (stateChange(ROOMIN, errorCode, errorString)) { localPlayerNum = localPlayerNr; }
+			stateChange(ROOMIN, errorCode, errorString);
 		}
 
 		void joinRandomRoomReturn(int localPlayerNr, const Hashtable& roomProperties, const Hashtable& playerProperties, int errorCode, const JString& errorString) override {
-			if (stateChange(ROOMIN, errorCode, errorString)) { localPlayerNum = localPlayerNr; }
+			stateChange(ROOMIN, errorCode, errorString);
 		}
 
 		void leaveRoomReturn(int errorCode, const JString& errorString) override {
 			stateChange(CONNECT, errorCode, errorString);
-			localPlayerNum = -1;
 		}
 
 		void joinLobbyReturn(void) override {};
