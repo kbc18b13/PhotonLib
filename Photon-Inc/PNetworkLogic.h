@@ -5,7 +5,7 @@
 
 namespace PhotonLib {
 	class PNetworkLogic : public ExitGames::LoadBalancing::Listener {
-		//クラススコープで上手い事名前空間省略する方法がわからんのでusingの嵐。全然わからん!
+		//クラススコープで名前空間省略。冗長。
 		template <typename T, typename U>
 		using Dictionary = ExitGames::Common::Dictionary<T, U>;
 		using Hashtable = ExitGames::Common::Hashtable;
@@ -13,10 +13,13 @@ namespace PhotonLib {
 		template <typename T>
 		using JVector = ExitGames::Common::JVector<T>;
 		using LobbyStatsResponse = ExitGames::LoadBalancing::LobbyStatsResponse;
+		using MutablePlayer = ExitGames::LoadBalancing::MutablePlayer;
+		using MutableRoom = ExitGames::LoadBalancing::MutableRoom;
 		using Object = ExitGames::Common::Object;
 		using OperationResponse = ExitGames::Photon::OperationResponse;
 		using Player = ExitGames::LoadBalancing::Player;
 		using RaiseEventOptions = ExitGames::LoadBalancing::RaiseEventOptions;
+		using Room = ExitGames::LoadBalancing::Room;
 
 	public:
 		/// <summary>
@@ -70,14 +73,14 @@ namespace PhotonLib {
 		/// </summary>
 		/// <remarks>その参照が取得された部屋を出た後に参照されたインスタンスにアクセスするときの振る舞い、
 		/// および部屋の中にいないでこの関数を呼び出すときの振る舞いは未定義です。コピーへの操作は影響しません。</remarks>
-		ExitGames::LoadBalancing::MutableRoom& getJoinedRoom() {
+		MutableRoom getJoinedRoom() {
 			return mLoadBalancingClient.getCurrentlyJoinedRoom();
 		}
 
 		/// <summary>
 		/// 自分のプレイヤーの参照を取得。
 		/// </summary>
-		ExitGames::LoadBalancing::MutablePlayer& getLocalPlayer() {
+		MutablePlayer getLocalPlayer() {
 			return mLoadBalancingClient.getLocalPlayer();
 		}
 
@@ -86,6 +89,13 @@ namespace PhotonLib {
 		/// </summary>
 		int getLocalPlayerNum() {
 			return mLoadBalancingClient.getLocalPlayer().getNumber();
+		}
+
+		/// <summary>
+		/// 部屋の一覧を取得。部屋に居ると最新の情報は入手できません。
+		/// </summary>
+		const JVector<Room*>& getRoomList() {
+			return mLoadBalancingClient.getRoomList();
 		}
 
 		/// <summary>
@@ -114,7 +124,7 @@ namespace PhotonLib {
 		/// </summary>
 		/// <param name="roomName">部屋の名前。</param>
 		/// <param name="maxPlayer">最大プレイヤー数</param>
-		void joinOrCreateRoom(ExitGames::Common::JString roomName, nByte maxPlayer) {
+		void joinOrCreateRoom(JString roomName, nByte maxPlayer) {
 			if (state == CONNECT) {
 				ExitGames::LoadBalancing::RoomOptions option;
 				option.setMaxPlayers(maxPlayer);
@@ -122,6 +132,15 @@ namespace PhotonLib {
 					EGLOG(ExitGames::Common::DebugLevel::ERRORS, L"Could not join or createRoom.");
 				}
 				state = TRY_ROOMIN;
+			}
+		}
+
+		/// <summary>
+		/// 部屋を出ます。
+		/// </summary>
+		void leaveRoom() {
+			if (state == ROOMIN) {
+				mLoadBalancingClient.opLeaveRoom();
 			}
 		}
 
