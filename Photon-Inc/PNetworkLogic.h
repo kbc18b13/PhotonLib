@@ -207,7 +207,7 @@ namespace PhotonLib {
 
 		std::vector<PEventListener*> listenerVector; //イベントリスナー入れ
 
-		ConnectState state; //接続状態
+		ConnectState state = DISCONNECT; //接続状態
 		int errorCode = 0; //直前の操作のエラーコード
 		int warningCode = 0;
 		JString errorMessage;
