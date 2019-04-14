@@ -22,6 +22,15 @@ namespace PhotonLib {
 		using Room = ExitGames::LoadBalancing::Room;
 
 	public:
+		//接続状態enum
+		enum ConnectState {
+			DISCONNECT,//切断
+			TRY_CONNECT,//接続試行中
+			CONNECT,//接続完了
+			TRY_ROOMIN,//ルームイン試行中
+			ROOMIN//ルームイン完了
+		};
+
 		/// <summary>
 		/// 初期化。
 		/// </summary>
@@ -60,11 +69,11 @@ namespace PhotonLib {
 			mLoadBalancingClient.disconnect();
 		}
 
-		bool getErrorCode() {
+		bool getErrorCode() const{
 			return errorCode;
 		}
 
-		JString getErrorMessage() {
+		JString getErrorMessage() const{
 			return errorMessage;
 		}
 
@@ -98,24 +107,28 @@ namespace PhotonLib {
 			return mLoadBalancingClient.getRoomList();
 		}
 
+		ConnectState getState() const{
+			return state;
+		}
+
 		/// <summary>
 		/// photon接続状態にあるならtrue。
 		/// </summary>
-		bool isConnecting() {
+		bool isConnecting() const{
 			return state >= CONNECT;
 		}
 
 		/// <summary>
 		/// エラーコードが0以外のときtrue。
 		/// </summary>
-		bool isError() {
+		bool isError() const{
 			return errorCode != 0;
 		}
 
 		/// <summary>
 		/// 部屋に入っていればtrue。
 		/// </summary>
-		bool isRoomIn() {
+		bool isRoomIn() const{
 			return state == ROOMIN;
 		}
 
@@ -191,15 +204,6 @@ namespace PhotonLib {
 		void Update() {
 			mLoadBalancingClient.service();
 		}
-
-		//接続状態enum
-		enum ConnectState {
-			DISCONNECT,//切断
-			TRY_CONNECT,//接続試行中
-			CONNECT,//接続完了
-			TRY_ROOMIN,//ルームイン試行中
-			ROOMIN//ルームイン完了
-		};
 	private:
 	/*************メンバ変数(private)**************/
 		ExitGames::LoadBalancing::Client mLoadBalancingClient; //photonへの操作を行うクライアント
