@@ -2,6 +2,7 @@
 #include <vector>
 #include "LoadBalancing-cpp/inc/Client.h"
 #include "PEventListener.h"
+#include <unordered_set>
 
 namespace PhotonLib {
 	class PNetworkLogic : public ExitGames::LoadBalancing::Listener {
@@ -37,7 +38,9 @@ namespace PhotonLib {
 		/// <param name="appID">photonのサイトで取得したappID</param>
 		/// <param name="appVersion">バージョン。適当に決めていい。</param>
 		PNetworkLogic(const JString& appID, const JString& appVersion)
-			:mLoadBalancingClient(*this, appID, appVersion, ExitGames::Photon::ConnectionProtocol::DEFAULT, true){};
+			:mLoadBalancingClient(*this, appID, appVersion, ExitGames::Photon::ConnectionProtocol::DEFAULT, true),
+			listenerVector(), playersNum() {
+		};
 
 		/// <summary>
 		/// PEventListenerを継承したクラスを登録する
@@ -69,11 +72,11 @@ namespace PhotonLib {
 			mLoadBalancingClient.disconnect();
 		}
 
-		bool getErrorCode() const{
+		bool getErrorCode() const {
 			return errorCode;
 		}
 
-		JString getErrorMessage() const{
+		JString getErrorMessage() const {
 			return errorMessage;
 		}
 
@@ -100,6 +103,10 @@ namespace PhotonLib {
 			return mLoadBalancingClient.getLocalPlayer().getNumber();
 		}
 
+		const std::unordered_set<int>& getPlayersNum() {
+			return playersNum;
+		}
+
 		/// <summary>
 		/// 部屋の一覧を取得。部屋に居ると最新の情報は入手できません。
 		/// </summary>
@@ -107,28 +114,28 @@ namespace PhotonLib {
 			return mLoadBalancingClient.getRoomList();
 		}
 
-		ConnectState getState() const{
+		ConnectState getState() const {
 			return state;
 		}
 
 		/// <summary>
 		/// photon接続状態にあるならtrue。
 		/// </summary>
-		bool isConnecting() const{
+		bool isConnecting() const {
 			return state >= CONNECT;
 		}
 
 		/// <summary>
 		/// エラーコードが0以外のときtrue。
 		/// </summary>
-		bool isError() const{
+		bool isError() const {
 			return errorCode != 0;
 		}
 
 		/// <summary>
 		/// 部屋に入っていればtrue。
 		/// </summary>
-		bool isRoomIn() const{
+		bool isRoomIn() const {
 			return state == ROOMIN;
 		}
 
@@ -204,12 +211,15 @@ namespace PhotonLib {
 		void Update() {
 			mLoadBalancingClient.service();
 		}
+
 	private:
 	/*************メンバ変数(private)**************/
 		ExitGames::LoadBalancing::Client mLoadBalancingClient; //photonへの操作を行うクライアント
 		ExitGames::Common::Logger mLogger; // accessed by EGLOG()
 
 		std::vector<PEventListener*> listenerVector; //イベントリスナー入れ
+
+		std::unordered_set<int> playersNum; //ルームにいるプレイヤーの番号
 
 		ConnectState state = DISCONNECT; //接続状態
 		int errorCode = 0; //直前の操作のエラーコード
@@ -244,8 +254,18 @@ namespace PhotonLib {
 		}
 
 		//同じ部屋にいる全プレイヤーの特定の操作によって引き起こされるイベント
-		void joinRoomEventAction(int playerNr, const JVector<int>& playernrs, const Player& player) override {};
-		void leaveRoomEventAction(int playerNr, bool isInactive) override {};
+		void joinRoomEventAction(int playerNr, const JVector<int>& playernrs, const Player& player) override {
+			if (playersNum.empty()) {
+				for (int i = 0; i < playernrs.getSize(); i++) {
+					playersNum.insert(playernrs[i]);
+				}
+			} else {
+				playersNum.insert(playerNr);
+			}
+		};
+		void leaveRoomEventAction(int playerNr, bool isInactive) override {
+			playersNum.erase(playerNr);
+		};
 
 		void customEventAction(int playerNr, nByte eventCode, const Object& eventContent) override;
 
@@ -276,6 +296,7 @@ namespace PhotonLib {
 
 		void leaveRoomReturn(int errorCode, const JString& errorString) override {
 			stateChange(CONNECT, errorCode, errorString);
+			playersNum.clear();
 		}
 
 		void joinLobbyReturn(void) override {};
