@@ -2,9 +2,18 @@
 
 namespace PhotonLib {
 	void PNetworkLogic::removeListener(PEventListener * listener) {
-		for (auto itr = listenerVector.begin(); itr != listenerVector.end(); itr++) {
+		for (auto itr = eventVector.begin(); itr != eventVector.end(); itr++) {
 			if ((*itr) == listener) {
-				listenerVector.erase(itr);
+				eventVector.erase(itr);
+				break;
+			}
+		}
+	}
+
+	void PNetworkLogic::removeListener(PLeaveListener * listener) {
+		for (auto itr = leaveVector.begin(); itr != leaveVector.end(); itr++) {
+			if ((*itr) == listener) {
+				leaveVector.erase(itr);
 				break;
 			}
 		}
@@ -21,8 +30,25 @@ namespace PhotonLib {
 		}
 	}
 
+	void PNetworkLogic::joinRoomEventAction(int playerNr, const JVector<int>& playernrs, const Player & player) {
+		if (playersNum.empty()) {
+			for (int i = 0; i < playernrs.getSize(); i++) {
+				playersNum.insert(playernrs[i]);
+			}
+		} else {
+			playersNum.insert(playerNr);
+		}
+	};
+
+	void PNetworkLogic::leaveRoomEventAction(int playerNr, bool isInactive) {
+		playersNum.erase(playerNr);
+		for (PLeaveListener* leLis : leaveVector) {
+			leLis->onLeave(playerNr);
+		}
+	}
+
 	void PNetworkLogic::customEventAction(int playerNr, nByte eventCode, const Object & eventContent) {
-		for (PEventListener* evLis : listenerVector) {
+		for (PEventListener* evLis : eventVector) {
 			evLis->onPhotonEvent(playerNr, eventCode, eventContent);
 		}
 	}

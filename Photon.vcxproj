@@ -173,6 +173,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Photon-Inc\PLeaveListener.h" />
     <ClInclude Include="Photon-Inc\PNetworkLogic.h" />
     <ClInclude Include="Photon-Inc\PEventListener.h" />
   </ItemGroup>

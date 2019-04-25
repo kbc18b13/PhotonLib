@@ -2,6 +2,7 @@
 #include <vector>
 #include "LoadBalancing-cpp/inc/Client.h"
 #include "PEventListener.h"
+#include "PLeaveListener.h"
 #include <unordered_set>
 
 namespace PhotonLib {
@@ -39,7 +40,7 @@ namespace PhotonLib {
 		/// <param name="appVersion">バージョン。適当に決めていい。</param>
 		PNetworkLogic(const JString& appID, const JString& appVersion)
 			:mLoadBalancingClient(*this, appID, appVersion, ExitGames::Photon::ConnectionProtocol::DEFAULT, true),
-			listenerVector(), playersNum() {
+			eventVector(), playersNum() {
 		};
 
 		/// <summary>
@@ -50,7 +51,18 @@ namespace PhotonLib {
 		/// </remarks>
 		/// <param name="listener"></param>
 		void addEventListener(PEventListener* listener) {
-			listenerVector.push_back(listener);
+			eventVector.push_back(listener);
+		}
+
+		/// <summary>
+		/// PLeaveListenerを継承したクラスを登録する
+		/// </summary>
+		/// <remarks>
+		/// 登録したクラスのonLeave関数がプレイヤー退出時呼ばれる。
+		/// </remarks>
+		/// <param name="listener"></param>
+		void addLeaveListener(PLeaveListener* listener) {
+			leaveVector.push_back(listener);
 		}
 
 		/// <summary>
@@ -112,6 +124,14 @@ namespace PhotonLib {
 		/// </summary>
 		const JVector<Room*>& getRoomList() {
 			return mLoadBalancingClient.getRoomList();
+		}
+
+		/// <summary>
+		/// 俗にいうping。ミリ秒単位。
+		/// </summary>
+		/// <returns></returns>
+		int GetRoundTripTime() {
+			return mLoadBalancingClient.getRoundTripTime();
 		}
 
 		ConnectState getState() const {
@@ -193,10 +213,11 @@ namespace PhotonLib {
 		}
 
 		/// <summary>
-		/// 全てのイベントリスナーを登録解除する
+		/// 全てのリスナーを登録解除する
 		/// </summary>
 		void removeAllListener() {
-			listenerVector.clear();
+			eventVector.clear();
+			leaveVector.clear();
 		}
 
 		/// <summary>
@@ -204,6 +225,12 @@ namespace PhotonLib {
 		/// </summary>
 		/// <param name="listener">登録解除したいリスナー</param>
 		void removeListener(PEventListener* listener);
+
+		// <summary>
+		/// 退出リスナーを登録解除する。
+		/// </summary>
+		/// <param name="listener">登録解除したいリスナー</param>
+		void removeListener(PLeaveListener* listener);
 
 		/// <summary>
 		/// ゲームループ内で呼び出し続けてください
@@ -217,7 +244,8 @@ namespace PhotonLib {
 		ExitGames::LoadBalancing::Client mLoadBalancingClient; //photonへの操作を行うクライアント
 		ExitGames::Common::Logger mLogger; // accessed by EGLOG()
 
-		std::vector<PEventListener*> listenerVector; //イベントリスナー入れ
+		std::vector<PEventListener*> eventVector; //イベントリスナー入れ
+		std::vector<PLeaveListener*> leaveVector; //退出リスナー入れ
 
 		std::unordered_set<int> playersNum; //ルームにいるプレイヤーの番号
 
@@ -254,18 +282,8 @@ namespace PhotonLib {
 		}
 
 		//同じ部屋にいる全プレイヤーの特定の操作によって引き起こされるイベント
-		void joinRoomEventAction(int playerNr, const JVector<int>& playernrs, const Player& player) override {
-			if (playersNum.empty()) {
-				for (int i = 0; i < playernrs.getSize(); i++) {
-					playersNum.insert(playernrs[i]);
-				}
-			} else {
-				playersNum.insert(playerNr);
-			}
-		};
-		void leaveRoomEventAction(int playerNr, bool isInactive) override {
-			playersNum.erase(playerNr);
-		};
+		void joinRoomEventAction(int playerNr, const JVector<int>& playernrs, const Player& player) override;
+		void leaveRoomEventAction(int playerNr, bool isInactive) override;
 
 		void customEventAction(int playerNr, nByte eventCode, const Object& eventContent) override;
 
