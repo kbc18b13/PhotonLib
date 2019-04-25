@@ -85,14 +85,14 @@ namespace PhotonLib {
 		/// </summary>
 		/// <remarks>その参照が取得された部屋を出た後に参照されたインスタンスにアクセスするときの振る舞い、
 		/// および部屋の中にいないでこの関数を呼び出すときの振る舞いは未定義です。コピーへの操作は影響しません。</remarks>
-		MutableRoom getJoinedRoom() {
+		MutableRoom& getJoinedRoom() {
 			return mLoadBalancingClient.getCurrentlyJoinedRoom();
 		}
 
 		/// <summary>
 		/// 自分のプレイヤーの参照を取得。
 		/// </summary>
-		MutablePlayer getLocalPlayer() {
+		MutablePlayer& getLocalPlayer() {
 			return mLoadBalancingClient.getLocalPlayer();
 		}
 
